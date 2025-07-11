@@ -93,4 +93,31 @@ export async function POST(request: NextRequest) {
     console.error("Error creating questionnaire:", error)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const token = request.headers.get("authorization")?.replace("Bearer ", "")
+    
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+    }
+
+    const decoded = await verifyToken(token)
+    if (!decoded || decoded.role !== "admin") {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+    }
+
+    await connectDB()
+
+    // Delete all questionnaires
+    const result = await Questionnaire.deleteMany({})
+    
+    return NextResponse.json({ 
+      message: `Deleted ${result.deletedCount} questionnaires successfully`
+    })
+  } catch (error) {
+    console.error("Error deleting questionnaires:", error)
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+  }
 } 

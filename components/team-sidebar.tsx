@@ -7,19 +7,22 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { LayoutDashboard, Users, FileText, BarChart3, LogOut } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
+import { usePathname } from "next/navigation"
 
 const teamMenuItems = [
   {
-    title: "Dashboard",
+    title: "Home",
     url: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -29,7 +32,7 @@ const teamMenuItems = [
     icon: Users,
   },
   {
-    title: "Fill Questionnaire",
+    title: "Questionnaire",
     url: "/dashboard/questionnaire",
     icon: FileText,
   },
@@ -42,41 +45,73 @@ const teamMenuItems = [
 
 export function TeamSidebar() {
   const { user, logout } = useAuth()
+  const pathname = usePathname()
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="px-2 py-4">
-          <h2 className="text-lg font-semibold">Team Dashboard</h2>
-          <p className="text-sm text-muted-foreground">Welcome, {user?.name}</p>
+    <Sidebar className="bg-white border-r border-gray-200">
+      <SidebarHeader className="p-6 relative">
+        {/* Collapse Toggle Button */}
+        <div className="absolute top-4 right-4">
+          <SidebarTrigger className="h-8 w-8 hover:bg-gray-100 rounded-md transition-colors" />
+        </div>
+        
+        <div className="text-center space-y-3 pr-12">
+          <div className="flex justify-center">
+            <Image
+              src="https://22527425.fs1.hubspotusercontent-na1.net/hubfs/22527425/Mazars-SA/Group%203.png"
+              alt="Mazars Logo"
+              width={120}
+              height={60}
+              className="h-12 w-auto object-contain"
+              priority
+            />
+          </div>
+          <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            TEAM MEMBER
+          </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      
+      <SidebarContent className="px-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {teamMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            <SidebarMenu className="space-y-1">
+              {teamMenuItems.map((item) => {
+                const isActive = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url))
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild 
+                      className={`w-full justify-start px-3 py-3 rounded-lg transition-colors ${
+                        isActive 
+                          ? "bg-blue-50 text-blue-600 hover:bg-blue-50" 
+                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <Link href={item.url} className="flex items-center gap-3">
+                        <item.icon className={`h-5 w-5 ${isActive ? "text-blue-600" : "text-gray-500"}`} />
+                        <span className="font-medium">{item.title}</span>
+                        
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="p-2">
-          <Button onClick={logout} variant="outline" className="w-full bg-transparent">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
-        </div>
+      
+      <SidebarFooter className="p-4 mt-auto">
+        <Button 
+          onClick={logout} 
+          variant="ghost" 
+          className="w-full justify-start px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+        >
+          <LogOut className="mr-3 h-5 w-5 text-gray-500" />
+          <span className="font-medium">Sign Out</span>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   )

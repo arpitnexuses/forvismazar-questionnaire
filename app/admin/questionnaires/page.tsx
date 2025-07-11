@@ -15,10 +15,13 @@ import { Plus, Edit, Trash2, Search, FileText, Eye, Copy, BarChart3, X, Save } f
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { riskManagementTemplate } from "@/lib/risk-management-template"
 
 interface Question {
   id: string
+  subtitle?: string
   text: string
+  expectedEvidence: string
   options: {
     text: string
     points: number
@@ -52,265 +55,8 @@ interface CreateQuestionnaireData {
   isActive: boolean
 }
 
-// Predefined risk management maturity assessment data
-const RISK_MANAGEMENT_SECTIONS = [
-  {
-    id: "1",
-    title: "RISK GOVERNANCE",
-    questions: [
-      {
-        id: "1.1.1",
-        text: "Is there a formally approved Risk Management Policy or Framework?",
-        options: [
-          { text: "1: No policy/framework", points: 1 },
-          { text: "2: Draft exists, not approved", points: 2 },
-          { text: "3: Approved but not widely circulated", points: 3 },
-          { text: "4: Approved and distributed", points: 4 },
-          { text: "5: Regularly reviewed and updated", points: 5 }
-        ]
-      },
-      {
-        id: "1.1.2",
-        text: "Does the Risk function report independently (not via Finance or Operations)?",
-        options: [
-          { text: "1: Reports under operations/finance", points: 1 },
-          { text: "2: Dual reporting, no autonomy", points: 2 },
-          { text: "3: Reports to C-level but no direct board access", points: 3 },
-          { text: "4: Dual reporting (CEO + Board/Audit)", points: 4 },
-          { text: "5: Reports directly to CEO and/or Board committee", points: 5 }
-        ]
-      },
-      {
-        id: "1.1.3",
-        text: "Is there a committee (Audit or Risk) that reviews risk topics regularly?",
-        options: [
-          { text: "1: No risk-related committee", points: 1 },
-          { text: "2: Risk mentioned informally", points: 2 },
-          { text: "3: Risk discussed semi-annually", points: 3 },
-          { text: "4: Dedicated risk sessions quarterly", points: 4 },
-          { text: "5: Risk is a standing item in each meeting", points: 5 }
-        ]
-      },
-      {
-        id: "1.1.4",
-        text: "Is there a clearly defined escalation process for high-risk exposures?",
-        options: [
-          { text: "1: No escalation path", points: 1 },
-          { text: "2: Escalation depends on management discretion", points: 2 },
-          { text: "3: Escalation criteria defined but not followed", points: 3 },
-          { text: "4: Escalation criteria consistently applied", points: 4 },
-          { text: "5: Triggers automated in systems; escalations logged and tracked", points: 5 }
-        ]
-      },
-      {
-        id: "1.1.5",
-        text: "Is risk formally integrated into corporate governance processes (e.g., strategic reviews, investment approvals)?",
-        options: [
-          { text: "1: Not considered", points: 1 },
-          { text: "2: Ad hoc inclusion", points: 2 },
-          { text: "3: Mentioned in major decisions only", points: 3 },
-          { text: "4: Integrated into all major processes", points: 4 },
-          { text: "5: Required in all governance workflows", points: 5 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "2",
-    title: "RISK APPETITE & STRATEGY",
-    questions: [
-      {
-        id: "2.1.1",
-        text: "Is there a formally documented Risk Appetite Statement (RAS) approved by the Board or EXCOM?",
-        options: [
-          { text: "1: No RAS", points: 1 },
-          { text: "2: Draft only", points: 2 },
-          { text: "3: Approved, not communicated", points: 3 },
-          { text: "4: Distributed", points: 4 },
-          { text: "5: Reviewed annually", points: 5 }
-        ]
-      },
-      {
-        id: "2.1.2",
-        text: "Is the RAS structured by risk category (e.g., investment, operational, market, compliance, ESG)?",
-        options: [
-          { text: "1: No categories", points: 1 },
-          { text: "2: 1–2 types only", points: 2 },
-          { text: "3: Most types", points: 3 },
-          { text: "4: Fully categorized", points: 4 },
-          { text: "5: Linked to risk taxonomy", points: 5 }
-        ]
-      },
-      {
-        id: "2.1.3",
-        text: "Are risk appetite thresholds or limits embedded in policies and procedures (e.g., investment criteria, approval matrices)?",
-        options: [
-          { text: "1: No links", points: 1 },
-          { text: "2: Vague mentions", points: 2 },
-          { text: "3: Some policies", points: 3 },
-          { text: "4: Widely embedded", points: 4 },
-          { text: "5: Enforced via systems", points: 5 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "3",
-    title: "RISK IDENTIFICATION & ASSESSMENT",
-    questions: [
-      {
-        id: "3.1.1",
-        text: "Is there a structured, repeatable process for risk identification across the organization?",
-        options: [
-          { text: "1: No process", points: 1 },
-          { text: "2: Informal in some areas", points: 2 },
-          { text: "3: Defined in Risk Dept only", points: 3 },
-          { text: "4: Standardized across departments", points: 4 },
-          { text: "5: Embedded in enterprise-wide planning cycles", points: 5 }
-        ]
-      },
-      {
-        id: "3.1.2",
-        text: "Are risk identification exercises conducted at both strategic and operational levels (e.g., top-down & bottom-up)?",
-        options: [
-          { text: "1: Not conducted", points: 1 },
-          { text: "2: Limited to one level", points: 2 },
-          { text: "3: Both levels but ad hoc", points: 3 },
-          { text: "4: Structured sessions across all levels", points: 4 },
-          { text: "5: Integrated with strategy reviews and planning", points: 5 }
-        ]
-      },
-      {
-        id: "3.1.3",
-        text: "Are risks identified across all relevant categories: strategic, financial, operational, legal/compliance, reputational, ESG?",
-        options: [
-          { text: "1: Financial/operational only", points: 1 },
-          { text: "2: Some categories included", points: 2 },
-          { text: "3: Categories exist but not used consistently", points: 3 },
-          { text: "4: Broad categories used in registers", points: 4 },
-          { text: "5: Full coverage with mapped controls", points: 5 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "4",
-    title: "RISK TREATMENT & RESPONSE",
-    questions: [
-      {
-        id: "4.1.1",
-        text: "Are mitigation actions defined for all key risks in the corporate and subsidiary-level risk registers?",
-        options: [
-          { text: "1: Not defined", points: 1 },
-          { text: "2: Only for some risks", points: 2 },
-          { text: "3: Inconsistent detail/coverage", points: 3 },
-          { text: "4: Defined for all high/critical risks", points: 4 },
-          { text: "5: Defined across all risk categories with clear linkage to risk ratings", points: 5 }
-        ]
-      },
-      {
-        id: "4.1.2",
-        text: "Are mitigation actions specific, measurable, and time-bound (SMART)?",
-        options: [
-          { text: "1: Generic mitigation ('will manage')", points: 1 },
-          { text: "2: High-level ideas only", points: 2 },
-          { text: "3: Some SMART measures", points: 3 },
-          { text: "4: Most mitigation plans SMART", points: 4 },
-          { text: "5: All plans SMART with review metrics", points: 5 }
-        ]
-      },
-      {
-        id: "4.1.3",
-        text: "Are mitigation responsibilities clearly assigned to accountable individuals or departments?",
-        options: [
-          { text: "1: No owner", points: 1 },
-          { text: "2: Named team or committee", points: 2 },
-          { text: "3: Owner named but accountability unclear", points: 3 },
-          { text: "4: Individual owners assigned and confirmed", points: 4 },
-          { text: "5: Owners track progress in real time", points: 5 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "5",
-    title: "MONITORING, REPORTING & KRIs",
-    questions: [
-      {
-        id: "5.1.1",
-        text: "Is there a formal risk reporting framework in place that defines frequency, format, and audience of risk reports?",
-        options: [
-          { text: "1: No structure", points: 1 },
-          { text: "2: Ad hoc reporting only", points: 2 },
-          { text: "3: Defined for EXCOM only", points: 3 },
-          { text: "4: Group-wide, all levels", points: 4 },
-          { text: "5: Aligned with governance cycles (Board, BU, audit)", points: 5 }
-        ]
-      },
-      {
-        id: "5.1.2",
-        text: "Are risk reports submitted periodically to senior management and/or the Board (e.g. Risk Committee, Audit Committee)?",
-        options: [
-          { text: "1: Not submitted", points: 1 },
-          { text: "2: Occasionally or informally", points: 2 },
-          { text: "3: Annual summary", points: 3 },
-          { text: "4: Quarterly with risk updates", points: 4 },
-          { text: "5: Part of monthly leadership dashboards", points: 5 }
-        ]
-      },
-      {
-        id: "5.1.3",
-        text: "Are reports tailored to the audience (e.g. summary for board, detailed for management, visuals for ops)?",
-        options: [
-          { text: "1: One format for all", points: 1 },
-          { text: "2: Slightly adjusted", points: 2 },
-          { text: "3: Board vs. ops version exists", points: 3 },
-          { text: "4: Fully customized formats", points: 4 },
-          { text: "5: Automated report tailoring by audience", points: 5 }
-        ]
-      }
-    ]
-  },
-  {
-    id: "6",
-    title: "INTEGRATION & CULTURE",
-    questions: [
-      {
-        id: "6.1.1",
-        text: "Does the organization use a centralized system or software for risk management (e.g. ERM platform, GRC tool)?",
-        options: [
-          { text: "1: No system in use", points: 1 },
-          { text: "2: Excel or email-based", points: 2 },
-          { text: "3: Departmental tools only", points: 3 },
-          { text: "4: Central system used by multiple departments", points: 4 },
-          { text: "5: Enterprise-wide GRC system with integration capabilities", points: 5 }
-        ]
-      },
-      {
-        id: "6.1.2",
-        text: "Does the system cover key processes (risk identification, assessment, treatment, monitoring, reporting)?",
-        options: [
-          { text: "1: Not applicable", points: 1 },
-          { text: "2: Covers limited workflows", points: 2 },
-          { text: "3: Covers 2–3 core steps", points: 3 },
-          { text: "4: End-to-end functionality with structured modules", points: 4 },
-          { text: "5: Fully integrated across lifecycle and departments", points: 5 }
-        ]
-      },
-      {
-        id: "6.1.3",
-        text: "Is the risk system integrated with other enterprise systems (e.g. finance, audit, compliance, HR)?",
-        options: [
-          { text: "1: No integration", points: 1 },
-          { text: "2: Manual data imports", points: 2 },
-          { text: "3: One-way feed (e.g. risk → finance)", points: 3 },
-          { text: "4: Bidirectional sync with selected systems", points: 4 },
-          { text: "5: Real-time, multi-system integration", points: 5 }
-        ]
-      }
-    ]
-  }
-]
+
+
 
 export default function EnhancedManageQuestionnaires() {
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([])
@@ -507,8 +253,11 @@ export default function EnhancedManageQuestionnaires() {
   const addQuestion = (questionnaireData: CreateQuestionnaireData, setData: (data: CreateQuestionnaireData) => void, sectionIndex: number) => {
     const newQuestion: Question = {
       id: Date.now().toString(),
+      subtitle: "",
       text: "",
+      expectedEvidence: "",
       options: [
+        { text: "Not available", points: 0 },
         { text: "", points: 1 },
         { text: "", points: 2 },
         { text: "", points: 3 },
@@ -542,6 +291,24 @@ export default function EnhancedManageQuestionnaires() {
     })
   }
 
+  const updateQuestionSubtitle = (questionnaireData: CreateQuestionnaireData, setData: (data: CreateQuestionnaireData) => void, sectionIndex: number, questionIndex: number, subtitle: string) => {
+    const newSections = [...questionnaireData.sections]
+    newSections[sectionIndex].questions[questionIndex].subtitle = subtitle
+    setData({
+      ...questionnaireData,
+      sections: newSections
+    })
+  }
+
+  const updateQuestionExpectedEvidence = (questionnaireData: CreateQuestionnaireData, setData: (data: CreateQuestionnaireData) => void, sectionIndex: number, questionIndex: number, expectedEvidence: string) => {
+    const newSections = [...questionnaireData.sections]
+    newSections[sectionIndex].questions[questionIndex].expectedEvidence = expectedEvidence
+    setData({
+      ...questionnaireData,
+      sections: newSections
+    })
+  }
+
   const updateOptionText = (questionnaireData: CreateQuestionnaireData, setData: (data: CreateQuestionnaireData) => void, sectionIndex: number, questionIndex: number, optionIndex: number, text: string) => {
     const newSections = [...questionnaireData.sections]
     newSections[sectionIndex].questions[questionIndex].options[optionIndex].text = text
@@ -561,10 +328,30 @@ export default function EnhancedManageQuestionnaires() {
   }
 
   const loadRiskManagementTemplate = () => {
+    // Convert the template structure to the format expected by the questionnaire builder
+    const convertedSections = riskManagementTemplate.sections.map((section: any) => ({
+      id: section.id,
+      title: section.title,
+      questions: section.questions.map((question: any) => ({
+        id: question.id,
+        text: question.text,
+        expectedEvidence: question.expectedEvidence || "",
+        options: question.options
+      }))
+    }))
+    
+    // Debug: Log the number of questions in each section
+    console.log("Template loading - Sections:", convertedSections.length)
+    const totalQuestions = convertedSections.reduce((total: number, section: any) => total + section.questions.length, 0)
+    console.log("Total questions loaded:", totalQuestions)
+    convertedSections.forEach((section: any, index: number) => {
+      console.log(`Section ${index + 1} (${section.title}): ${section.questions.length} questions`)
+    })
+    
     setCreateQuestionnaireData({
-      title: "Risk Management Maturity Assessment",
-      description: "Comprehensive assessment of risk management practices and maturity levels across the organization",
-      sections: RISK_MANAGEMENT_SECTIONS,
+      title: "Risk Management Assessment",
+      description: "Comprehensive risk assessment questionnaire for organizations",
+      sections: convertedSections,
       isActive: true,
     })
   }
@@ -634,12 +421,63 @@ export default function EnhancedManageQuestionnaires() {
               
               <div className="flex items-center justify-between">
                 <Label className="text-lg font-semibold">Questionnaire Builder</Label>
-                <Button variant="outline" onClick={loadRiskManagementTemplate}>
-                  Load Risk Management Template
-                </Button>
+                <div className="flex space-x-2">
+                  <Button variant="outline" onClick={loadRiskManagementTemplate}>
+                    Load Risk Management Template
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      console.log("=== TEMPLATE DEBUG ===")
+                      console.log("Template sections:", riskManagementTemplate.sections.length)
+                      let totalQuestions = 0
+                      riskManagementTemplate.sections.forEach((section: any, index: number) => {
+                        const questionCount = section.questions.length
+                        totalQuestions += questionCount
+                        console.log(`Section ${index + 1} (${section.title}): ${questionCount} questions`)
+                      })
+                      console.log("Total questions in template:", totalQuestions)
+                      
+                      // Test the conversion
+                      const convertedSections = riskManagementTemplate.sections.map((section: any) => ({
+                        id: section.id,
+                        title: section.title,
+                        questions: section.questions.map((question: any) => ({
+                          id: question.id,
+                          text: question.text,
+                          options: question.options
+                        }))
+                      }))
+                      
+                      const convertedTotal = convertedSections.reduce((total: number, section: any) => total + section.questions.length, 0)
+                      console.log("Total questions after conversion:", convertedTotal)
+                      
+                      // Check for any questions with missing data
+                      convertedSections.forEach((section: any, sectionIndex: number) => {
+                        section.questions.forEach((question: any, questionIndex: number) => {
+                          if (!question.text || question.text.trim() === '') {
+                            console.error(`Missing text in Section ${sectionIndex + 1}, Question ${questionIndex + 1}`)
+                          }
+                          if (!question.options || question.options.length === 0) {
+                            console.error(`Missing options in Section ${sectionIndex + 1}, Question ${questionIndex + 1}`)
+                          }
+                        })
+                      })
+                      
+                      console.log("=== END DEBUG ===")
+                    }}
+                  >
+                    Debug Template
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
+                {createQuestionnaireData.sections.length > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    Total Questions: {createQuestionnaireData.sections.reduce((total, section) => total + section.questions.length, 0)}
+                  </div>
+                )}
                 {createQuestionnaireData.sections.map((section, sectionIndex) => (
                   <Card key={section.id}>
                     <CardHeader className="pb-3">
@@ -663,7 +501,12 @@ export default function EnhancedManageQuestionnaires() {
                       {section.questions.map((question, questionIndex) => (
                         <div key={question.id} className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <Label className="text-sm font-medium">Question {questionIndex + 1}</Label>
+                            <div>
+                              <Label className="text-sm font-medium">Question {questionIndex + 1}</Label>
+                              {question.subtitle && (
+                                <p className="text-xs text-muted-foreground mt-1">{question.subtitle}</p>
+                              )}
+                            </div>
                             <Button
                               variant="outline"
                               size="sm"
@@ -672,12 +515,35 @@ export default function EnhancedManageQuestionnaires() {
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                          <Textarea
-                            value={question.text}
-                            onChange={(e) => updateQuestionText(createQuestionnaireData, setCreateQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
-                            placeholder="Enter question text"
-                            rows={2}
-                          />
+                          <div className="space-y-2">
+                            <div>
+                              <Label className="text-xs">Subtitle (optional)</Label>
+                              <Input
+                                value={question.subtitle || ""}
+                                onChange={(e) => updateQuestionSubtitle(createQuestionnaireData, setCreateQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                                placeholder="Enter question subtitle"
+                                className="text-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Question Text</Label>
+                              <Textarea
+                                value={question.text}
+                                onChange={(e) => updateQuestionText(createQuestionnaireData, setCreateQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                                placeholder="Enter question text"
+                                rows={2}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Expected Evidence</Label>
+                              <Textarea
+                                value={question.expectedEvidence}
+                                onChange={(e) => updateQuestionExpectedEvidence(createQuestionnaireData, setCreateQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                                placeholder="Enter expected evidence (e.g., • Document type 1\n• Document type 2)"
+                                rows={3}
+                              />
+                            </div>
+                          </div>
                           <div className="space-y-2">
                             <Label className="text-sm">Options</Label>
                             {question.options.map((option, optionIndex) => (
@@ -915,6 +781,11 @@ export default function EnhancedManageQuestionnaires() {
             
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Questionnaire Structure</Label>
+              {editQuestionnaireData.sections.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  Total Questions: {editQuestionnaireData.sections.reduce((total, section) => total + section.questions.length, 0)}
+                </div>
+              )}
               {editQuestionnaireData.sections.map((section, sectionIndex) => (
                 <Card key={section.id}>
                   <CardHeader className="pb-3">
@@ -938,7 +809,12 @@ export default function EnhancedManageQuestionnaires() {
                     {section.questions.map((question, questionIndex) => (
                       <div key={question.id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">Question {questionIndex + 1}</Label>
+                          <div>
+                            <Label className="text-sm font-medium">Question {questionIndex + 1}</Label>
+                            {question.subtitle && (
+                              <p className="text-xs text-muted-foreground mt-1">{question.subtitle}</p>
+                            )}
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"
@@ -947,12 +823,35 @@ export default function EnhancedManageQuestionnaires() {
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-                        <Textarea
-                          value={question.text}
-                          onChange={(e) => updateQuestionText(editQuestionnaireData, setEditQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
-                          placeholder="Enter question text"
-                          rows={2}
-                        />
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-xs">Subtitle (optional)</Label>
+                            <Input
+                              value={question.subtitle || ""}
+                              onChange={(e) => updateQuestionSubtitle(editQuestionnaireData, setEditQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                              placeholder="Enter question subtitle"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Question Text</Label>
+                            <Textarea
+                              value={question.text}
+                              onChange={(e) => updateQuestionText(editQuestionnaireData, setEditQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                              placeholder="Enter question text"
+                              rows={2}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Expected Evidence</Label>
+                            <Textarea
+                              value={question.expectedEvidence}
+                              onChange={(e) => updateQuestionExpectedEvidence(editQuestionnaireData, setEditQuestionnaireData, sectionIndex, questionIndex, e.target.value)}
+                              placeholder="Enter expected evidence (e.g., • Document type 1\n• Document type 2)"
+                              rows={3}
+                            />
+                          </div>
+                        </div>
                         <div className="space-y-2">
                           <Label className="text-sm">Options</Label>
                           {question.options.map((option, optionIndex) => (

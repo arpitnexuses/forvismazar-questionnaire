@@ -1,12 +1,20 @@
 import mongoose from "mongoose"
 
+export interface IUploadedFile {
+  originalName: string
+  fileName: string
+  size: number
+  type: string
+  url: string
+}
+
 export interface IAnswer {
   questionId: string
   selectedOption: number
   points: number
   testResult?: string
   comments?: string
-  commentFiles?: string[]
+  uploadedFiles?: IUploadedFile[]
   recommendation?: string
   agreedActionPlan?: string
   actionDate?: Date
@@ -51,7 +59,15 @@ const SubmissionSchema = new mongoose.Schema(
         points: Number,
         testResult: String,
         comments: String,
-        commentFiles: [String],
+        uploadedFiles: [
+          {
+            originalName: String,
+            fileName: String,
+            size: Number,
+            type: String,
+            url: String,
+          },
+        ],
         recommendation: String,
         agreedActionPlan: String,
         actionDate: Date,

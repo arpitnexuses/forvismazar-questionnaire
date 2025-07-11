@@ -3,6 +3,7 @@ import mongoose from "mongoose"
 export interface IQuestion {
   id: string
   text: string
+  expectedEvidence: string
   options: {
     text: string
     points: number
@@ -44,6 +45,7 @@ const QuestionnaireSchema = new mongoose.Schema(
           {
             id: String,
             text: String,
+            expectedEvidence: String,
             options: [
               {
                 text: String,
