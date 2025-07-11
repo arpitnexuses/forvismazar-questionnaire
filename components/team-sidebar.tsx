@@ -66,7 +66,7 @@ export function TeamSidebar() {
               priority
             />
           </div>
-          <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+          <div className="text-base font-medium text-gray-600 uppercase tracking-wide">
             TEAM MEMBER
           </div>
         </div>
@@ -91,7 +91,7 @@ export function TeamSidebar() {
                     >
                       <Link href={item.url} className="flex items-center gap-3">
                         <item.icon className={`h-5 w-5 ${isActive ? "text-blue-600" : "text-gray-500"}`} />
-                        <span className="font-medium">{item.title}</span>
+                        <span className="font-medium text-base">{item.title}</span>
                         
                       </Link>
                     </SidebarMenuButton>
@@ -110,7 +110,7 @@ export function TeamSidebar() {
           className="w-full justify-start px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
         >
           <LogOut className="mr-3 h-5 w-5 text-gray-500" />
-          <span className="font-medium">Sign Out</span>
+          <span className="font-medium text-base">Sign Out</span>
         </Button>
       </SidebarFooter>
     </Sidebar>

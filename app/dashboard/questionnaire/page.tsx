@@ -906,6 +906,47 @@ export default function QuestionnairePage() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Recommendation Section */}
+                            <div className="space-y-4">
+                              <Label className="text-sm font-semibold text-gray-700">
+                                Recommendation
+                              </Label>
+                              <Textarea
+                                placeholder="Provide recommendations for improvement or remediation..."
+                                value={currentAnswer?.recommendation || ""}
+                                onChange={(e) => handleTextChange(question.id, 'recommendation', e.target.value)}
+                                className="min-h-[80px] resize-none"
+                                rows={3}
+                              />
+                            </div>
+
+                            {/* Agreed Action Plan Section */}
+                            <div className="space-y-4">
+                              <Label className="text-sm font-semibold text-gray-700">
+                                Agreed Action Plan
+                              </Label>
+                              <Textarea
+                                placeholder="Detail the specific actions agreed upon to address identified risks or gaps..."
+                                value={currentAnswer?.agreedActionPlan || ""}
+                                onChange={(e) => handleTextChange(question.id, 'agreedActionPlan', e.target.value)}
+                                className="min-h-[80px] resize-none"
+                                rows={3}
+                              />
+                            </div>
+
+                            {/* Action Date Section */}
+                            <div className="space-y-4">
+                              <Label className="text-sm font-semibold text-gray-700">
+                                Action Date
+                              </Label>
+                              <input
+                                type="date"
+                                value={currentAnswer?.actionDate || ""}
+                                onChange={(e) => handleDateChange(question.id, e.target.value)}
+                                className="w-full h-10 px-3 border border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
+                              />
+                            </div>
                           </div>
                         )}
                       </CardContent>
