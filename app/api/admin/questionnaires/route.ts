@@ -24,6 +24,16 @@ export async function GET(request: NextRequest) {
       .populate("createdBy", "name")
       .lean()
     
+    console.log("Admin questionnaires API - Total questionnaires:", questionnaires.length)
+    if (questionnaires.length > 0) {
+      console.log("Admin questionnaires API - First questionnaire:", {
+        id: questionnaires[0]._id,
+        title: questionnaires[0].title,
+        description: questionnaires[0].description,
+        isActive: questionnaires[0].isActive
+      })
+    }
+    
     // Get submission counts for each questionnaire
     const submissionCounts = await Submission.aggregate([
       {
@@ -33,6 +43,8 @@ export async function GET(request: NextRequest) {
         }
       }
     ])
+
+    console.log("Admin questionnaires API - Submission counts:", submissionCounts)
 
     // Create lookup map
     const submissionCountMap = new Map(submissionCounts.map(item => [item._id.toString(), item.count]))

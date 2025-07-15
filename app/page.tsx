@@ -69,7 +69,7 @@ export default function HomePage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="admin@nexuses.in"
+                  placeholder="Email Address"
                   className="h-12 border-gray-300 focus:border-[#0072CD] focus:ring-[#0072CD] rounded-md"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">

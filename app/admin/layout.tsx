@@ -4,9 +4,25 @@ import type React from "react"
 
 import { useAuth } from "@/components/providers/auth-provider"
 import { AdminSidebar } from "@/components/admin-sidebar"
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+
+function ContentWrapper({ children }: { children: React.ReactNode }) {
+  const { state } = useSidebar()
+  
+  return (
+    <div className="relative flex flex-1 flex-col">
+      {/* Floating Sidebar Toggle - only show when collapsed */}
+      {state === "collapsed" && (
+        <div className="fixed top-6 left-6 z-50">
+          <SidebarTrigger className="h-10 w-10 bg-white shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 rounded-lg" />
+        </div>
+      )}
+      {children}
+    </div>
+  )
+}
 
 export default function AdminLayout({
   children,
@@ -24,8 +40,8 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50/50">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
       </div>
     )
   }
@@ -38,13 +54,7 @@ export default function AdminLayout({
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Admin Dashboard</h1>
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">{children}</div>
+        <ContentWrapper>{children}</ContentWrapper>
       </SidebarInset>
     </SidebarProvider>
   )
