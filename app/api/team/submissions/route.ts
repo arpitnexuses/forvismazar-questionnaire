@@ -108,6 +108,14 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .limit(50)
 
+    console.log("API: Found submissions:", submissions.length)
+    if (submissions.length > 0) {
+      console.log("API: First submission dates:", {
+        createdAt: submissions[0].createdAt,
+        submittedAt: submissions[0].submittedAt
+      })
+    }
+
     return NextResponse.json(submissions)
   } catch (error) {
     console.error("Error fetching submissions:", error)
