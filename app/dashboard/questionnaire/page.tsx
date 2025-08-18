@@ -953,7 +953,38 @@ export default function QuestionnairePage() {
                     </Card>
                   )
                 })}
+
+                {/* Bottom Navigation */}
+                <div className="flex items-center justify-between pt-6 border-t mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={prevSection}
+                    disabled={currentSection === 0}
+                    className="flex items-center"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Previous Section
+                  </Button>
+                  
+                  <div className="text-center">
+                    <Badge variant="outline" className="text-sm font-medium">
+                      {currentSectionData?.title}
+                    </Badge>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={nextSection}
+                    disabled={currentSection === totalSections - 1}
+                    className="flex items-center"
+                  >
+                    Next Section
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+
+
             )}
           </>
         )}
