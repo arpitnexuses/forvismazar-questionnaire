@@ -85,6 +85,8 @@ export default function QuestionnairePage() {
     fetchData()
   }, [])
 
+
+
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("auth-token")
@@ -191,7 +193,9 @@ export default function QuestionnairePage() {
   const handleTooltipEnter = (questionId: string, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect()
     const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
     const tooltipWidth = 384 // w-96 = 24rem = 384px
+    const tooltipHeight = 120 // Approximate height of tooltip
     
     // Calculate x position, ensuring tooltip doesn't go off screen
     let x = rect.left + rect.width / 2
@@ -202,15 +206,25 @@ export default function QuestionnairePage() {
       x = tooltipWidth / 2 + 20
     }
     
+    // Calculate y position, ensuring tooltip doesn't go off screen
+    let y = rect.top - 10
+    if (y - tooltipHeight < 20) {
+      // If tooltip would go above viewport, position it below the button
+      y = rect.bottom + 10
+    }
+    
     setTooltipPosition({
       x: x,
-      y: rect.top - 10
+      y: y
     })
     setTooltipVisible(questionId)
   }
 
   const handleTooltipLeave = () => {
-    setTooltipVisible(null)
+    // Add a small delay to prevent flashing
+    setTimeout(() => {
+      setTooltipVisible(null)
+    }, 100)
   }
 
   const handleFileUpload = async (questionId: string, files: FileList) => {
@@ -286,12 +300,20 @@ export default function QuestionnairePage() {
   const nextSection = () => {
     if (currentSection < totalSections - 1) {
       setCurrentSection(currentSection + 1)
+      // Scroll to top after state update
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 50)
     }
   }
 
   const prevSection = () => {
     if (currentSection > 0) {
       setCurrentSection(currentSection - 1)
+      // Scroll to top after state update
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 50)
     }
   }
 
@@ -763,6 +785,7 @@ export default function QuestionnairePage() {
                                 className="h-10 w-10 p-0 bg-blue-50 hover:bg-blue-100 text-blue-600"
                                 onMouseEnter={(e) => handleTooltipEnter(question.id, e)}
                                 onMouseLeave={handleTooltipLeave}
+                                aria-label={`View expected evidence for question ${questionIndex + 1}`}
                               >
                                 <HelpCircle className="h-5 w-5" />
                               </Button>
@@ -992,17 +1015,31 @@ export default function QuestionnairePage() {
         {/* Tooltip */}
         {tooltipVisible && (
           <div
-            className="fixed z-50 w-96 p-4 bg-white border border-gray-200 rounded-lg shadow-xl"
+            className="fixed z-[9999] w-96 p-4 bg-white border border-gray-200 rounded-lg shadow-2xl max-w-sm pointer-events-none"
             style={{
               left: tooltipPosition.x - 192, // Center the tooltip (w-96 = 384px / 2 = 192px)
               top: tooltipPosition.y - 60, // Position above the element
             }}
           >
-            <div className="space-y-2">
-              <h4 className="font-semibold text-gray-900">Expected Evidence</h4>
-              <p className="text-sm text-gray-600">
-                {currentSectionData?.questions.find(q => q.id === tooltipVisible)?.expectedEvidence || 'Not available'}
-              </p>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <HelpCircle className="h-4 w-4 text-blue-600" />
+                <h4 className="font-semibold text-gray-900">Expected Evidence</h4>
+              </div>
+                             <div className="text-sm text-gray-600 leading-relaxed space-y-2">
+                 {currentSectionData?.questions.find(q => q.id === tooltipVisible)?.expectedEvidence ? (
+                   currentSectionData.questions.find(q => q.id === tooltipVisible)?.expectedEvidence
+                     .split('.')
+                     .filter(sentence => sentence.trim().length > 0)
+                     .map((sentence, index) => (
+                       <p key={index} className="text-sm text-gray-600">
+                         {sentence.trim()}.
+                       </p>
+                     ))
+                 ) : (
+                   <p className="text-sm text-gray-600">No expected evidence specified for this question.</p>
+                 )}
+               </div>
             </div>
           </div>
         )}

@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BarChart3, Search, Filter, Eye, Download, Calendar, User, FileText, TrendingUp, Building, Award, AlertTriangle, Trash2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import jsPDF from "jspdf"
+import ExportModal from "@/components/export-modal"
 
 interface Submission {
   _id: string
@@ -78,6 +78,8 @@ export default function ReportsPage() {
   const [detailedSubmission, setDetailedSubmission] = useState<Submission | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [deletingSubmission, setDeletingSubmission] = useState<string | null>(null)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [selectedSubmissionForExport, setSelectedSubmissionForExport] = useState<Submission | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -277,340 +279,14 @@ export default function ReportsPage() {
     }
   }
 
-  const exportReport = async (submission: Submission) => {
-    try {
-      console.log("Starting export for submission:", submission._id)
-      
-      // Fetch detailed submission data if not already available
-      let detailedData = detailedSubmission
-      if (!detailedData || detailedData._id !== submission._id) {
-        console.log("Fetching detailed data for export")
-        detailedData = await fetchDetailedSubmission(submission._id)
-        if (!detailedData) {
-          console.error("Failed to fetch detailed data for export")
-          toast({
-            title: "Error",
-            description: "Failed to fetch detailed submission data for export",
-            variant: "destructive",
-          })
-          return
-        }
-      }
-      
-      console.log("Detailed data available for export:", detailedData)
+  const openExportModal = (submission: Submission) => {
+    setSelectedSubmissionForExport(submission)
+    setShowExportModal(true)
+  }
 
-      // Validate that we have the required data
-      if (!detailedData.questionnaire?.sections) {
-        console.error("Missing questionnaire sections in detailed data")
-        toast({
-          title: "Error",
-          description: "Missing questionnaire data for export",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Validate that this is the correct client's data
-      if (detailedData.client?._id !== submission.client?._id) {
-        console.error("Client mismatch in detailed data")
-        toast({
-          title: "Error",
-          description: "Client data mismatch for export",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const clientName = submission.client?.name || "Unknown Client"
-      const questionnaireTitle = submission.questionnaire?.title || "Risk Management Assessment"
-      
-      console.log("Creating PDF for:", { clientName, questionnaireTitle })
-      
-      // Check if jsPDF is available
-      if (typeof jsPDF === 'undefined') {
-        console.error("jsPDF library not loaded")
-        toast({
-          title: "Error",
-          description: "PDF library not available",
-          variant: "destructive",
-        })
-        return
-      }
-      
-      // Create PDF
-      const pdf = new jsPDF()
-      
-      // Add Forvis Mazars logo at the top center
-      try {
-        // Add logo image centered at the top
-        const logoUrl = '/fmlogo.png'
-        // Center the logo: (page width - logo width) / 2 = (210 - 60) / 2 = 75
-        pdf.addImage(logoUrl, 'PNG', 75, 10, 60, 30)
-      } catch (logoError) {
-        console.warn("Logo loading failed:", logoError)
-      }
-      
-      // Add title
-      pdf.setFontSize(16)
-      pdf.text("Risk Management Assessment Report", 105, 50, { align: "center" })
-      
-      // Add client information
-      pdf.setFontSize(12)
-      pdf.text(`Client: ${clientName}`, 20, 65)
-      if (submission.client?.company) {
-        pdf.text(`Company: ${submission.client.company}`, 20, 75)
-      }
-      
-      // Add submission ID for reference
-      pdf.text(`Submission ID: ${submission._id}`, 20, 85)
-      pdf.text(`Assessment: ${questionnaireTitle}`, 20, 95)
-      
-      // Safe date handling for display
-      let submissionDateStr = "Unknown Date"
-      try {
-        const dateToUse = submission.createdAt || submission.submittedAt
-        console.log("Original date:", dateToUse)
-        console.log("Type of date:", typeof dateToUse)
-        
-        if (dateToUse) {
-          let submissionDate: Date
-          if (typeof dateToUse === 'string') {
-            submissionDate = new Date(dateToUse)
-          } else if (dateToUse) {
-            // If it's a timestamp or other format
-            submissionDate = new Date(dateToUse)
-          } else {
-            submissionDate = new Date()
-          }
-          
-          console.log("Parsed submissionDate:", submissionDate)
-          console.log("Is valid date:", !isNaN(submissionDate.getTime()))
-          
-          if (!isNaN(submissionDate.getTime())) {
-            submissionDateStr = submissionDate.toLocaleDateString()
-          }
-        }
-      } catch (dateError) {
-        console.warn("Date display error:", dateError)
-      }
-      pdf.text(`Date: ${submissionDateStr}`, 20, 105)
-      pdf.text(`Score: ${submission.totalScore}/${submission.maxTotalScore} (${getScorePercentage(submission.totalScore, submission.maxTotalScore)}%)`, 20, 115)
-      
-      // Add section scores
-      let yPosition = 135
-      pdf.setFontSize(14)
-      pdf.text("Section Scores:", 20, yPosition)
-      yPosition += 10
-      
-      pdf.setFontSize(10)
-      submission.sectionScores.forEach((section, index) => {
-        const sectionPercentage = getScorePercentage(section.score, section.maxScore)
-        pdf.text(`Section ${index + 1}: ${section.score}/${section.maxScore} (${sectionPercentage}%)`, 30, yPosition)
-        yPosition += 7
-      })
-      
-            // Add detailed answers organized by sections
-      yPosition += 10
-      pdf.setFontSize(14)
-      pdf.text("Detailed Assessment by Sections:", 20, yPosition)
-      yPosition += 10
-      
-      console.log("Starting to process sections for PDF")
-      try {
-        detailedData.questionnaire.sections.forEach((section, sectionIndex) => {
-          console.log(`Processing section ${sectionIndex + 1}:`, section.title)
-          
-          // Check if we need a new page for this section
-          if (yPosition > 220) {
-            pdf.addPage()
-            yPosition = 20
-          }
-          
-          // Add section header
-          pdf.setFontSize(14)
-          pdf.setTextColor(0, 0, 139) // Dark blue for section headers
-          pdf.text(`Section ${sectionIndex + 1}: ${section.title}`, 20, yPosition)
-          yPosition += 8
-          
-          // Add section score
-          const sectionScore = submission.sectionScores.find(s => s.sectionId === section.id)
-          if (sectionScore) {
-            pdf.setFontSize(10)
-            pdf.setTextColor(0, 0, 0)
-            const sectionPercentage = getScorePercentage(sectionScore.score, sectionScore.maxScore)
-            pdf.text(`Section Score: ${sectionScore.score}/${sectionScore.maxScore} (${sectionPercentage}%)`, 30, yPosition)
-            yPosition += 6
-          }
-          
-          yPosition += 5
-          
-          // Process questions in this section
-          let questionNumber = 1
-          section.questions.forEach((question, index) => {
-            const answer = submission.answers.find(a => a.questionId === question.id)
-            if (answer) {
-              console.log(`Processing question ${questionNumber}:`, question.text.substring(0, 50) + "...")
-              
-              // Check if we need a new page
-              if (yPosition > 250) {
-                pdf.addPage()
-                yPosition = 20
-              }
-              
-              pdf.setFontSize(12)
-              pdf.setTextColor(0, 0, 0)
-              pdf.text(`Question ${questionNumber}:`, 20, yPosition)
-              yPosition += 7
-              
-              // Add question text (wrap if needed)
-              const questionText = question.text
-              const maxWidth = 170
-              const lines = pdf.splitTextToSize(questionText, maxWidth)
-              pdf.setFontSize(10)
-              lines.forEach((line: string) => {
-                pdf.text(line, 30, yPosition)
-                yPosition += 5
-              })
-              
-              // Add expected evidence
-              yPosition += 3
-              pdf.setFontSize(9)
-              pdf.setTextColor(100, 100, 100) // Gray for evidence
-              pdf.text("Expected Evidence:", 30, yPosition)
-              yPosition += 4
-              const evidenceLines = pdf.splitTextToSize(question.expectedEvidence, maxWidth - 10)
-              evidenceLines.forEach((line: string) => {
-                pdf.text(line, 35, yPosition)
-                yPosition += 4
-              })
-              yPosition += 3
-              
-              // Add selected option
-              pdf.setFontSize(10)
-              pdf.setTextColor(0, 0, 0)
-              pdf.text("Selected Option:", 30, yPosition)
-              yPosition += 5
-              
-              const selectedOption = question.options[answer.selectedOption]
-              if (selectedOption) {
-                pdf.setTextColor(0, 100, 0) // Green for selected option
-                pdf.text(`• ${selectedOption.text} (${selectedOption.points} points)`, 40, yPosition)
-                yPosition += 7
-              }
-              
-              // Add comments if available
-              if (answer.comments) {
-                pdf.setTextColor(0, 0, 0)
-                pdf.text("Comments:", 30, yPosition)
-                yPosition += 5
-                const commentLines = pdf.splitTextToSize(answer.comments, maxWidth - 10)
-                commentLines.forEach((line: string) => {
-                  pdf.text(line, 40, yPosition)
-                  yPosition += 5
-                })
-                yPosition += 3
-              }
-              
-              // Add recommendation if available
-              if (answer.recommendation) {
-                pdf.setTextColor(139, 69, 19) // Brown for recommendations
-                pdf.text("Recommendation:", 30, yPosition)
-                yPosition += 5
-                const recLines = pdf.splitTextToSize(answer.recommendation, maxWidth - 10)
-                recLines.forEach((line: string) => {
-                  pdf.text(line, 40, yPosition)
-                  yPosition += 5
-                })
-                yPosition += 3
-              }
-              
-              // Add action plan if available
-              if (answer.agreedActionPlan) {
-                pdf.setTextColor(0, 100, 0) // Green for action plans
-                pdf.text("Action Plan:", 30, yPosition)
-                yPosition += 5
-                const actionLines = pdf.splitTextToSize(answer.agreedActionPlan, maxWidth - 10)
-                actionLines.forEach((line: string) => {
-                  pdf.text(line, 40, yPosition)
-                  yPosition += 5
-                })
-                yPosition += 3
-              }
-              
-              // Add action date if available
-              if (answer.actionDate) {
-                let actionDateStr = "Invalid Date"
-                try {
-                  const actionDate = new Date(answer.actionDate)
-                  if (!isNaN(actionDate.getTime())) {
-                    actionDateStr = actionDate.toLocaleDateString()
-                  }
-                } catch (dateError) {
-                  console.warn("Action date display error:", dateError)
-                }
-                pdf.setTextColor(0, 0, 0)
-                pdf.text(`Target Date: ${actionDateStr}`, 30, yPosition)
-                yPosition += 7
-              }
-              
-              yPosition += 8
-              questionNumber++
-            }
-          })
-          
-          // Add section separator
-          yPosition += 5
-        })
-      
-      console.log("PDF generation completed, saving file...")
-      
-      // Save the PDF with safe date handling
-      let fileName: string
-      try {
-        const dateToUse = submission.createdAt || submission.submittedAt
-        if (dateToUse) {
-          const submissionDate = new Date(dateToUse)
-          if (isNaN(submissionDate.getTime())) {
-            // If date is invalid, use current date
-            fileName = `assessment-${clientName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
-          } else {
-            fileName = `assessment-${clientName.replace(/\s+/g, '-')}-${submissionDate.toISOString().split('T')[0]}.pdf`
-          }
-        } else {
-          // No date available, use current date
-          fileName = `assessment-${clientName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
-        }
-      } catch (dateError) {
-        console.warn("Date parsing error, using current date:", dateError)
-        fileName = `assessment-${clientName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`
-      }
-      
-      console.log("Saving PDF as:", fileName)
-      pdf.save(fileName)
-    } catch (pdfError) {
-      console.error("Error during PDF generation:", pdfError)
-      throw new Error(`PDF generation failed: ${pdfError instanceof Error ? pdfError.message : String(pdfError)}`)
-    }
-      
-      console.log("PDF export completed successfully")
-      toast({
-        title: "Success",
-        description: "Report exported as PDF successfully",
-        duration: 5000, // Auto-dismiss after 5 seconds
-      })
-    } catch (error) {
-      console.error("Error exporting report:", error)
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : 'Unknown'
-      })
-      toast({
-        title: "Error",
-        description: "Failed to export report",
-        variant: "destructive",
-      })
-    }
+  const closeExportModal = () => {
+    setShowExportModal(false)
+    setSelectedSubmissionForExport(null)
   }
 
   if (loading) {
@@ -824,7 +500,7 @@ export default function ReportsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => exportReport(submission)}
+                            onClick={() => openExportModal(submission)}
                             className="h-10"
                           >
                             <Download className="mr-2 h-4 w-4" />
@@ -1088,6 +764,14 @@ export default function ReportsPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Export Modal */}
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={closeExportModal}
+          submission={selectedSubmissionForExport}
+          onExportComplete={closeExportModal}
+        />
       </div>
     </div>
   )
